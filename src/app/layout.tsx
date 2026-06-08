@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import Providers from "./providers";
 
 const pretendard = localFont({
   src: "./fonts/PretendardVariable.woff2",
@@ -32,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${pretendard.variable} ${jetBrainsMono.variable} h-full`}>
       <body className="h-full">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

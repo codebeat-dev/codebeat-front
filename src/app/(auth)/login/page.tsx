@@ -2,23 +2,34 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/common'
+import { login, getMe } from '@/lib/api/auth'
+import { useAuthStore } from '@/store/authStore'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const setAuth = useAuthStore((s) => s.setAuth)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
 
-    // TODO: 실제 로그인 API 호출
-    setTimeout(() => {
+    try {
+      const { access_token } = await login({ email, password })
+      const user = await getMe()
+      setAuth(access_token, user)
+      router.push('/setup')
+    } catch {
+      setError('이메일 또는 비밀번호가 올바르지 않습니다.')
+    } finally {
       setIsLoading(false)
-      // 로그인 성공 후 /setup으로 리다이렉트
-      window.location.href = '/setup'
-    }, 1000)
+    }
   }
 
   return (
@@ -36,6 +47,11 @@ export default function LoginPage() {
 
         {/* Login Form */}
         <div className="bg-[var(--paper-2)] border border-[var(--rule)] rounded-xl p-6">
+          {error && (
+            <p className="mb-4 text-sm text-[var(--bad)] bg-[var(--bad)]/10 border border-[var(--bad)]/20 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[var(--fg-2)] mb-2">

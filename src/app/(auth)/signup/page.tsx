@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/common'
+import { register, getMe } from '@/lib/api/auth'
+import { useAuthStore } from '@/store/authStore'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -12,6 +15,9 @@ export default function SignupPage() {
     confirmPassword: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
+  const setAuth = useAuthStore((s) => s.setAuth)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -22,20 +28,30 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
 
     if (formData.password !== formData.confirmPassword) {
-      alert('비밀번호가 일치하지 않습니다.')
+      setError('비밀번호가 일치하지 않습니다.')
       return
     }
 
     setIsLoading(true)
 
-    // TODO: 실제 회원가입 API 호출
-    setTimeout(() => {
+    try {
+      const { access_token } = await register({
+        username: formData.name,
+        email: formData.email,
+        password: formData.password,
+      })
+      const user = await getMe()
+      setAuth(access_token, user)
+      router.push('/setup')
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setError(msg ?? '이미 사용 중인 이메일 또는 이름입니다.')
+    } finally {
       setIsLoading(false)
-      // 회원가입 성공 후 /setup으로 리다이렉트
-      window.location.href = '/setup'
-    }, 1000)
+    }
   }
 
   return (
@@ -53,6 +69,11 @@ export default function SignupPage() {
 
         {/* Signup Form */}
         <div className="bg-[var(--paper-2)] border border-[var(--rule)] rounded-xl p-6">
+          {error && (
+            <p className="mb-4 text-sm text-[var(--bad)] bg-[var(--bad)]/10 border border-[var(--bad)]/20 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-[var(--fg-2)] mb-2">
