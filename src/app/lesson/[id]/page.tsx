@@ -50,6 +50,57 @@ const lessonData: Record<string, Lesson> = {
     practiceText: '{}[](); {}[] (); {}[](); :"\'; :{[]}',
     keyHighlight: ['{', '}', '[', ']', '(', ')', ';', ':', "'", '"'],
   },
+  '7': {
+    title: 'Python 패턴',
+    description: 'Python에서 자주 쓰이는 콜론, 언더스코어, 들여쓰기 패턴을 연습해보세요.',
+    practiceText: 'def add(a, b): return a + b\nfor i in range(10): print(i)\nif x > 0: x = x - 1',
+    keyHighlight: [':', '_', '#', ' '],
+  },
+  '8': {
+    title: 'JavaScript 패턴',
+    description: 'JavaScript에서 자주 쓰이는 화살표 함수, 중괄호, 세미콜론을 연습해보세요.',
+    practiceText: 'const add = (a, b) => a + b;\nlet name = "codebeat";\nconst fn = () => {};',
+    keyHighlight: ['=', '>', '{', '}', ';'],
+  },
+  '9': {
+    title: 'Java 패턴',
+    description: 'Java에서 자주 쓰이는 중괄호, 세미콜론, 대소문자 혼합을 연습해보세요.',
+    practiceText: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("hello");\n    }\n}',
+    keyHighlight: ['{', '}', ';', '(', ')'],
+  },
+  '10': {
+    title: 'C 패턴',
+    description: 'C에서 자주 쓰이는 포인터, 화살표 연산자, 헤더 포함 패턴을 연습해보세요.',
+    practiceText: '#include <stdio.h>\nint main() {\n    int *p = NULL;\n    printf("hello\\n");\n    return 0;\n}',
+    keyHighlight: ['*', '-', '>', '#', ';'],
+  },
+  '11': {
+    title: 'SQL 패턴',
+    description: 'SQL에서 자주 쓰이는 대문자 키워드, 언더스코어, WHERE 절을 연습해보세요.',
+    practiceText: 'SELECT user_name, email FROM users WHERE age > 20 ORDER BY created_at DESC;',
+    keyHighlight: ['_', '>', ';', '*'],
+  },
+}
+
+const STORAGE_KEY = 'codebeat_lesson_progress'
+
+const getLessonProgress = (): Record<string, { passed: boolean; accuracy: number }> => {
+  if (typeof window === 'undefined') return {}
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
+}
+
+const saveLessonProgress = (id: string, passed: boolean, accuracy: number) => {
+  const prev = getLessonProgress()
+  // 이미 통과한 레슨은 낮은 점수로 덮어쓰지 않음
+  if (prev[id]?.passed && !passed) return
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    ...prev,
+    [id]: { passed, accuracy },
+  }))
 }
 
 export default function LessonDetailPage() {
@@ -105,11 +156,16 @@ export default function LessonDetailPage() {
 
       // 연습 완료 체크
       if (currentPos + 1 >= practiceText.length) {
+        const finalAccuracy = totalInputs > 0
+          ? Math.round(((totalInputs - errors) / totalInputs) * 100)
+          : 100
+        const passed = finalAccuracy >= 90
+        saveLessonProgress(lessonId, passed, finalAccuracy)
         setEndTime(Date.now())
         setStep('result')
       }
     }
-  }, [step, currentPos, practiceText, startTime])
+  }, [step, currentPos, practiceText, startTime, totalInputs, errors, lessonId])
 
   const handleBeforeInput = useCallback((e: InputEvent) => {
     if (step !== 'practice' || !practiceText) return
@@ -135,10 +191,15 @@ export default function LessonDetailPage() {
 
     // 연습 완료 체크
     if (currentPos + 1 >= practiceText.length) {
+      const finalAccuracy = totalInputs > 0
+        ? Math.round(((totalInputs - errors) / totalInputs) * 100)
+        : 100
+      const passed = finalAccuracy >= 90
+      saveLessonProgress(lessonId, passed, finalAccuracy)
       setEndTime(Date.now())
       setStep('result')
     }
-  }, [step, currentPos, practiceText, startTime])
+  }, [step, currentPos, practiceText, startTime, totalInputs, errors, lessonId])
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyPress)
