@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* CodeBeat Design System - Dark Editor Theme */
+
+  /* Background Layers */
+  --ink: #0B0D11;        /* deepest bg */
+  --paper: #10131A;      /* base canvas */
+  --paper-2: #161A23;    /* elevated */
+  --paper-3: #1C2230;    /* hovered */
+
+  /* Borders */
+  --rule: #232938;       /* hairline */
+  --rule-2: #2E3548;     /* stronger hairline */
+
+  /* Text Colors */
+  --fg-1: #E8E8E2;       /* primary text */
+  --fg-2: #B5B7BD;       /* secondary */
+  --fg-3: #7A7E89;       /* muted */
+  --fg-4: #525663;       /* gutter / disabled */
+  --fg-5: #363B48;       /* almost-bg */
+
+  /* CodeBeat Brand Palette */
+  --primary-50: #EEEDFE;
+  --primary-100: #CECBF6;
+  --primary-200: #AFA9EC;
+  --primary-400: #7F77DD;
+  --primary-600: #534AB7;
+  --primary-800: #3C3489;
+  --primary-900: #26215C;
+
+  --brand-accent-50: #E1F5EE;
+  --brand-accent-100: #9FE1CB;
+  --brand-accent-200: #5DCAA5;
+  --brand-accent-400: #1D9E75;
+  --brand-accent-600: #0F6E56;
+  --brand-accent-800: #085041;
+  --brand-accent-900: #04342C;
+
+  --semantic-error-50: #FCEBEB;
+  --semantic-error-400: #E24B4A;
+  --semantic-warning-400: #BA7517;
+  --semantic-neutral-50: #F1EFE8;
+  --semantic-neutral-400: #888780;
+
+  /* Accent Colors */
+  --accent: var(--primary-600);     /* main CTA / link */
+  --accent-2: var(--primary-400);   /* icon / secondary emphasis */
+  --accent-wash: rgba(83,74,183,0.14);
+  --accent-ink: #0B0D11; /* accent contrast */
+
+  /* Semantic Colors */
+  --good: var(--brand-accent-400);  /* success / CPM */
+  --warn: var(--semantic-warning-400);
+  --bad: var(--semantic-error-400);
+
+  /* Syntax Highlighting */
+  --syn-key: var(--primary-400);
+  --syn-str: var(--brand-accent-400);
+  --syn-fn: var(--brand-accent-200);
+  --syn-com: var(--semantic-neutral-400);
+  --syn-num: var(--semantic-warning-400);
+  --syn-type: var(--primary-200);
+  --syn-op: var(--primary-100);
+  --syn-param: var(--brand-accent-100);
+  --syn-builtin: var(--primary-200);
+  --syn-punct: var(--fg-2);
+
+  /* Error states */
+  --bad-wash: rgba(226,75,74,0.18);
+  --bad-line: rgba(226,75,74,0.10);
+  --err: var(--semantic-error-400); /* alias for error */
+
+  /* Typography */
+  --font-sans: var(--font-sans-loaded, system-ui, -apple-system, sans-serif);
+  --font-mono: var(--font-mono-loaded, ui-monospace, 'SF Mono', Menlo, monospace);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ink);
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
