@@ -43,6 +43,7 @@ export default function SignupPage() {
         email: formData.email,
         password: formData.password,
       })
+      localStorage.setItem('access_token', access_token)
       const user = await getMe()
       setAuth(access_token, user)
       router.push('/setup')

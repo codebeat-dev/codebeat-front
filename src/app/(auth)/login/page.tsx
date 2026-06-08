@@ -22,6 +22,7 @@ export default function LoginPage() {
 
     try {
       const { access_token } = await login({ email, password })
+      localStorage.setItem('access_token', access_token)
       const user = await getMe()
       setAuth(access_token, user)
       router.push('/setup')
