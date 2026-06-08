@@ -1,10 +1,13 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { tokenize, flatten, groupLines } from '@/lib/tokenizer'
 import { useAdvancedTyping } from '@/hooks/useAdvancedTyping'
+import { generateCode } from '@/lib/api/code'
+import { createSession } from '@/lib/api/session'
+import { usePracticeStore } from '@/store/practiceStore'
 
 const LANGS = [
   { id: 'python', ext: 'py' },
@@ -224,16 +227,62 @@ const formatTime = (ms: number): string => {
   return `${m}:${s}`
 }
 
+const LANG_LABEL_MAP: Record<string, string> = {
+  python: 'Python',
+  js: 'JavaScript',
+  java: 'Java',
+  c: 'C',
+  sql: 'SQL',
+}
+
+const DIFF_LABEL_MAP: Record<string, string> = {
+  beginner: '입문',
+  easy: '초급',
+  mid: '중급',
+}
+
 const PracticeContent = () => {
-  const searchParams = useSearchParams()
-  const [langId, setLangId] = useState<LangId>(() => getInitialLang(searchParams.get('lang')))
-  const [diffId, setDiffId] = useState<DiffId>(() => getInitialDiff(searchParams.get('diff')))
+  const router = useRouter()
+  const { language: storedLang, difficulty: storedDiff, setCodeExample } = usePracticeStore()
+
+  const [langId, setLangId] = useState<LangId>(() => getInitialLang(storedLang))
+  const [diffId, setDiffId] = useState<DiffId>(() => getInitialDiff(storedDiff))
   const [sampleIdx, setSampleIdx] = useState(0)
   const [typingActive, setTypingActive] = useState(false)
   const typingTimer = useRef<NodeJS.Timeout | null>(null)
 
+  // API 상태
+  const [apiCode, setApiCode] = useState<string | null>(null)
+  const [codeExampleId, setCodeExampleId] = useState<string | null>(null)
+  const [isLoadingCode, setIsLoadingCode] = useState(false)
+  const [isSavingSession, setIsSavingSession] = useState(false)
+
+  // API에서 코드 가져오기 (실패 시 로컬 샘플 폴백)
+  const fetchCode = useCallback(async (lang: LangId, diff: DiffId) => {
+    setIsLoadingCode(true)
+    setApiCode(null)
+    setCodeExampleId(null)
+    try {
+      const result = await generateCode({
+        language: LANG_LABEL_MAP[lang] ?? lang,
+        difficulty: DIFF_LABEL_MAP[diff] ?? diff,
+      })
+      setApiCode(result.code)
+      setCodeExampleId(result.id)
+      setCodeExample(result)
+    } catch {
+      // 백엔드 없으면 로컬 샘플 사용
+    } finally {
+      setIsLoadingCode(false)
+    }
+  }, [setCodeExample])
+
+  useEffect(() => {
+    fetchCode(langId, diffId)
+  }, [langId, diffId, fetchCode])
+
   const pool = useMemo(() => getSamples(langId, diffId), [langId, diffId])
-  const code = pool[sampleIdx % pool.length]
+  const code = apiCode ?? pool[sampleIdx % pool.length]
   const chars = useMemo(() => flatten(tokenize(code, langId)), [code, langId])
   const lines = useMemo(() => groupLines(chars), [chars])
 
@@ -297,6 +346,56 @@ const PracticeContent = () => {
     const id = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(id)
   }, [startTime, endTime, paused, setNow])
+
+  // 연습 완료 → 세션 저장 후 result 페이지로 이동
+  useEffect(() => {
+    if (!endTime || !startTime) return
+
+    const saveAndRedirect = async () => {
+      const durationSec = Math.round((endTime - startTime) / 1000)
+      const keystrokeData = history
+        .filter(h => !h.auto && h.actual)
+        .map(h => ({
+          char: h.actual,
+          time_ms: 0,
+          is_error: !h.ok,
+        }))
+
+      const params = new URLSearchParams({
+        lang: langId,
+        diff: diffId,
+        cpm: String(cpm),
+        accuracy: String(Math.round(accuracy)),
+        time: String(durationSec),
+        errors: String(errors),
+        totalKeys: String(totalKeys),
+        chars: String(history.filter(h => h.ok !== undefined && !h.auto).length),
+      })
+
+      if (codeExampleId) {
+        setIsSavingSession(true)
+        try {
+          const session = await createSession({
+            code_example_id: codeExampleId,
+            cpm,
+            accuracy: accuracy / 100,
+            duration_sec: durationSec,
+            keystroke_data: keystrokeData,
+          })
+          params.set('sessionId', session.id)
+        } catch {
+          // 저장 실패해도 result 페이지는 이동
+        } finally {
+          setIsSavingSession(false)
+        }
+      }
+
+      router.push(`/result?${params.toString()}`)
+    }
+
+    saveAndRedirect()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endTime])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -371,6 +470,12 @@ const PracticeContent = () => {
           <div className="cb-live-pair"><span className="cb-live-value">{cpm}</span><span className="cb-live-key">cpm</span></div>
           <div className="cb-live-pair"><span className={`cb-live-value ${accClass}`}>{accuracy}%</span><span className="cb-live-key">acc</span></div>
           <div className="cb-live-pair"><span className="cb-live-value">{timeStr}</span><span className="cb-live-key">time</span></div>
+        </div>
+      )}
+
+      {(isLoadingCode || isSavingSession) && (
+        <div className="cb-loading">
+          <span>{isLoadingCode ? 'generating code...' : 'saving session...'}</span>
         </div>
       )}
 

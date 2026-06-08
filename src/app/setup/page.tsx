@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, Card, CardTopStripe, CardCheckbox, Badge, PlayIcon } from '@/components/common'
 import { Gutter, Statusbar } from '@/components/editor'
 import { cn } from '@/lib/design-utils'
 import type { Language, Difficulty } from '@/types/practice'
 import Header from '@/components/common/Header'
+import { usePracticeStore } from '@/store/practiceStore'
 
 const LANGUAGES: Language[] = [
   { id: 'python', ext: 'py', name: 'Python', sub: 'pythonic', hint: '들여쓰기 · 콜론' },
@@ -101,6 +103,8 @@ export default function Home() {
   const [langId, setLangId] = useState('python')
   const [diffId, setDiffId] = useState('beginner')
   const [started, setStarted] = useState(false)
+  const router = useRouter()
+  const { setLanguage, setDifficulty } = usePracticeStore()
 
   const lang = LANGUAGES.find(l => l.id === langId) || null
   const diff = DIFFICULTIES.find(d => d.id === diffId) || null
@@ -111,7 +115,12 @@ export default function Home() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && ready && !started) {
         setStarted(true)
-        setTimeout(() => setStarted(false), 1800)
+        setLanguage(langId)
+        setDifficulty(diffId)
+        setTimeout(() => {
+          setStarted(false)
+          router.push('/practice')
+        }, 1800)
       }
       // number 1-5 -> language
       if (e.key >= '1' && e.key <= '5') {
@@ -201,10 +210,11 @@ export default function Home() {
                 keyboard={ready && !started ? "⏎ enter" : undefined}
                 onClick={() => {
                   setStarted(true)
+                  setLanguage(langId)
+                  setDifficulty(diffId)
                   setTimeout(() => {
                     setStarted(false)
-                    // /practice로 이동하면서 선택된 언어/난이도 전달
-                    window.location.href = `/practice?lang=${langId}&diff=${diffId}`
+                    router.push('/practice')
                   }, 1800)
                 }}
                 className="flex-1"

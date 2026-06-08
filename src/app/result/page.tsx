@@ -3,10 +3,12 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Suspense, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/common'
 import { ConfettiLayer } from '@/components/common/ConfettiLayer'
 import { useCountUp } from '@/hooks/useCountUp'
 import Header from '@/components/common/Header'
+import { getSession } from '@/lib/api/session'
 
 const SPARK_DATA = [110, 132, 128, 145, 138, 142, 150, 144, 148, 155, 162, 158, 140, 152, 160]
 
@@ -43,7 +45,6 @@ const formatTime = (sec: number): string => {
 const ResultContent = () => {
   const searchParams = useSearchParams()
 
-  // Get data from URL params (in real app this would come from practice session)
   const cpm = parseInt(searchParams.get('cpm') || '142')
   const accuracy = parseInt(searchParams.get('accuracy') || '96')
   const timeElapsed = parseInt(searchParams.get('time') || '83')
@@ -52,6 +53,17 @@ const ResultContent = () => {
   const chars = parseInt(searchParams.get('chars') || '152')
   const language = searchParams.get('lang') || 'python'
   const difficulty = searchParams.get('diff') || 'beginner'
+  const sessionId = searchParams.get('sessionId')
+
+  // 세션 데이터 조회 (sessionId 있을 때만)
+  const { data: sessionData } = useQuery({
+    queryKey: ['session', sessionId],
+    queryFn: () => getSession(sessionId!),
+    enabled: !!sessionId,
+  })
+
+  const aiFeedback = sessionData?.ai_feedback ?? null
+  const weakPatterns = sessionData?.weak_patterns ?? null
 
   // Mock previous best data
   const previousBest = { cpm: 138, accuracy: 97, timeSec: 79 }
@@ -236,6 +248,31 @@ const ResultContent = () => {
               avg <b className="text-[var(--accent)] font-semibold">{Math.round(SPARK_DATA.reduce((a, b) => a + b, 0) / SPARK_DATA.length)}</b>
             </div>
           </div>
+
+          {/* AI 피드백 */}
+          {(aiFeedback || weakPatterns) && (
+            <div className="mb-6 p-4 border border-[var(--accent)]/20 bg-[var(--accent)]/5 rounded-lg">
+              <div className="font-[var(--font-mono)] text-[11px] tracking-[0.14em] uppercase text-[var(--accent)] mb-3">
+                AI 분석
+              </div>
+              {aiFeedback && (
+                <p className="text-sm text-[var(--fg-2)] leading-relaxed mb-3">{aiFeedback}</p>
+              )}
+              {weakPatterns && weakPatterns.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {weakPatterns.map((wp, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1.5 px-2 py-1 bg-[var(--bad)]/10 border border-[var(--bad)]/20 rounded font-[var(--font-mono)] text-xs"
+                    >
+                      <span className="text-[var(--bad)] font-medium">{wp.pattern}</span>
+                      <span className="text-[var(--fg-4)]">{Math.round(wp.error_rate * 100)}% 오류</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-2.5">
